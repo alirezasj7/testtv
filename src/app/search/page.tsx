@@ -18,7 +18,7 @@ import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
 
 function SearchPageClient() {
-  // 搜索历史
+  // تاریخچه جستجو
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
   const router = useRouter();
@@ -28,7 +28,7 @@ function SearchPageClient() {
   const [showResults, setShowResults] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
 
-  // 获取默认聚合设置：只读取用户本地设置，默认为 true
+  // دریافت تنظیمات پیش‌فرض تجمیع: فقط تنظیمات محلی کاربر خوانده می‌شود، پیش‌فرض true است
   const getDefaultAggregate = () => {
     if (typeof window !== 'undefined') {
       const userSetting = localStorage.getItem('defaultAggregateSearch');
@@ -36,18 +36,18 @@ function SearchPageClient() {
         return JSON.parse(userSetting);
       }
     }
-    return true; // 默认启用聚合
+    return true; // تجمیع به طور پیش‌فرض فعال است
   };
 
   const [viewMode, setViewMode] = useState<'agg' | 'all'>(() => {
     return getDefaultAggregate() ? 'agg' : 'all';
   });
 
-  // 聚合后的结果（按标题和年份分组）
+  // نتایج تجمیع شده (گروه‌بندی بر اساس عنوان و سال)
   const aggregatedResults = useMemo(() => {
     const map = new Map<string, SearchResult[]>();
     searchResults.forEach((item) => {
-      // 使用 title + year + type 作为键，year 必然存在，但依然兜底 'unknown'
+      // استفاده از title + year + type به عنوان کلید، year حتما وجود دارد اما برای اطمینان 'unknown' هم در نظر گرفته می‌شود
       const key = `${item.title.replaceAll(' ', '')}-${
         item.year || 'unknown'
       }-${item.episodes.length === 1 ? 'movie' : 'tv'}`;
@@ -56,7 +56,7 @@ function SearchPageClient() {
       map.set(key, arr);
     });
     return Array.from(map.entries()).sort((a, b) => {
-      // 优先排序：标题与搜索词完全一致的排在前面
+      // اولویت‌بندی مرتب‌سازی: عناوینی که دقیقاً با عبارت جستجو مطابقت دارند، در ابتدا قرار می‌گیرند
       const aExactMatch = a[1][0].title
         .replaceAll(' ', '')
         .includes(searchQuery.trim().replaceAll(' ', ''));
@@ -67,22 +67,22 @@ function SearchPageClient() {
       if (aExactMatch && !bExactMatch) return -1;
       if (!aExactMatch && bExactMatch) return 1;
 
-      // 年份排序
+      // مرتب‌سازی بر اساس سال
       if (a[1][0].year === b[1][0].year) {
         return a[0].localeCompare(b[0]);
       } else {
-        // 处理 unknown 的情况
+        // مدیریت حالت 'unknown'
         const aYear = a[1][0].year;
         const bYear = b[1][0].year;
 
         if (aYear === 'unknown' && bYear === 'unknown') {
           return 0;
         } else if (aYear === 'unknown') {
-          return 1; // a 排在后面
+          return 1; // a در انتها قرار می‌گیرد
         } else if (bYear === 'unknown') {
-          return -1; // b 排在后面
+          return -1; // b در انتها قرار می‌گیرد
         } else {
-          // 都是数字年份，按数字大小排序（大的在前面）
+          // اگر هر دو سال عددی هستند، بر اساس مقدار عددی مرتب‌سازی کن (بزرگتر در ابتدا)
           return aYear > bYear ? -1 : 1;
         }
       }
@@ -90,13 +90,13 @@ function SearchPageClient() {
   }, [searchResults]);
 
   useEffect(() => {
-    // 无搜索参数时聚焦搜索框
+    // هنگامی که پارامتر جستجو وجود ندارد، روی کادر جستجو تمرکز کن
     !searchParams.get('q') && document.getElementById('searchInput')?.focus();
 
-    // 初始加载搜索历史
+    // بارگیری اولیه تاریخچه جستجو
     getSearchHistory().then(setSearchHistory);
 
-    // 监听搜索历史更新事件
+    // گوش دادن به رویداد به‌روزرسانی تاریخچه جستجو
     const unsubscribe = subscribeToDataUpdates(
       'searchHistoryUpdated',
       (newHistory: string[]) => {
@@ -108,13 +108,13 @@ function SearchPageClient() {
   }, []);
 
   useEffect(() => {
-    // 当搜索参数变化时更新搜索状态
+    // هنگام تغییر پارامترهای جستجو، وضعیت جستجو را به‌روزرسانی کن
     const query = searchParams.get('q');
     if (query) {
       setSearchQuery(query);
       fetchSearchResults(query);
 
-      // 保存到搜索历史 (事件监听会自动更新界面)
+      // ذخیره در تاریخچه جستجو (شنونده رویداد به طور خودکار رابط کاربری را به‌روزرسانی می‌کند)
       addSearchHistory(query);
     } else {
       setShowResults(false);
@@ -130,26 +130,26 @@ function SearchPageClient() {
       const data = await response.json();
       setSearchResults(
         data.results.sort((a: SearchResult, b: SearchResult) => {
-          // 优先排序：标题与搜索词完全一致的排在前面
+          // اولویت‌بندی مرتب‌سازی: عناوینی که دقیقاً با عبارت جستجو مطابقت دارند، در ابتدا قرار می‌گیرند
           const aExactMatch = a.title === query.trim();
           const bExactMatch = b.title === query.trim();
 
           if (aExactMatch && !bExactMatch) return -1;
           if (!aExactMatch && bExactMatch) return 1;
 
-          // 如果都匹配或都不匹配，则按原来的逻辑排序
+          // اگر هر دو مطابقت دارند یا هیچ‌کدام مطابقت ندارند، بر اساس منطق اصلی مرتب‌سازی کن
           if (a.year === b.year) {
             return a.title.localeCompare(b.title);
           } else {
-            // 处理 unknown 的情况
+            // مدیریت حالت 'unknown'
             if (a.year === 'unknown' && b.year === 'unknown') {
               return 0;
             } else if (a.year === 'unknown') {
-              return 1; // a 排在后面
+              return 1; // a در انتها قرار می‌گیرد
             } else if (b.year === 'unknown') {
-              return -1; // b 排在后面
+              return -1; // b در انتها قرار می‌گیرد
             } else {
-              // 都是数字年份，按数字大小排序（大的在前面）
+              // اگر هر دو سال عددی هستند، بر اساس مقدار عددی مرتب‌سازی کن (بزرگتر در ابتدا)
               return parseInt(a.year) > parseInt(b.year) ? -1 : 1;
             }
           }
@@ -168,23 +168,23 @@ function SearchPageClient() {
     const trimmed = searchQuery.trim().replace(/\s+/g, ' ');
     if (!trimmed) return;
 
-    // 回显搜索框
+    // نمایش مجدد در کادر جستجو
     setSearchQuery(trimmed);
     setIsLoading(true);
     setShowResults(true);
 
     router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-    // 直接发请求
+    // ارسال مستقیم درخواست
     fetchSearchResults(trimmed);
 
-    // 保存到搜索历史 (事件监听会自动更新界面)
+    // ذخیره در تاریخچه جستجو (شنونده رویداد به طور خودکار رابط کاربری را به‌روزرسانی می‌کند)
     addSearchHistory(trimmed);
   };
 
   return (
     <PageLayout activePath='/search'>
       <div className='px-4 sm:px-10 py-4 sm:py-8 overflow-visible mb-10'>
-        {/* 搜索框 */}
+        {/* کادر جستجو */}
         <div className='mb-8'>
           <form onSubmit={handleSearch} className='max-w-2xl mx-auto'>
             <div className='relative'>
@@ -194,14 +194,14 @@ function SearchPageClient() {
                 type='text'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder='搜索电影、电视剧...'
+                placeholder='جستجوی فیلم، سریال...'
                 className='w-full h-12 rounded-lg bg-gray-50/80 py-3 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white border border-gray-200/50 shadow-sm dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:bg-gray-700 dark:border-gray-700'
               />
             </div>
           </form>
         </div>
 
-        {/* 搜索结果或搜索历史 */}
+        {/* نتایج جستجو یا تاریخچه جستجو */}
         <div className='max-w-[95%] mx-auto mt-12 overflow-visible'>
           {isLoading ? (
             <div className='flex justify-center items-center h-40'>
@@ -209,15 +209,15 @@ function SearchPageClient() {
             </div>
           ) : showResults ? (
             <section className='mb-12'>
-              {/* 标题 + 聚合开关 */}
+              {/* عنوان + کلید تجمیع */}
               <div className='mb-8 flex items-center justify-between'>
                 <h2 className='text-xl font-bold text-gray-800 dark:text-gray-200'>
-                  搜索结果
+                  نتایج جستجو
                 </h2>
-                {/* 聚合开关 */}
+                {/* کلید تجمیع */}
                 <label className='flex items-center gap-2 cursor-pointer select-none'>
                   <span className='text-sm text-gray-700 dark:text-gray-300'>
-                    聚合
+                    تجمیع
                   </span>
                   <div className='relative'>
                     <input
@@ -279,24 +279,24 @@ function SearchPageClient() {
                     ))}
                 {searchResults.length === 0 && (
                   <div className='col-span-full text-center text-gray-500 py-8 dark:text-gray-400'>
-                    未找到相关结果
+                    نتیجه مرتبطی یافت نشد
                   </div>
                 )}
               </div>
             </section>
           ) : searchHistory.length > 0 ? (
-            // 搜索历史
+            // تاریخچه جستجو
             <section className='mb-12'>
               <h2 className='mb-4 text-xl font-bold text-gray-800 text-left dark:text-gray-200'>
-                搜索历史
+                تاریخچه جستجو
                 {searchHistory.length > 0 && (
                   <button
                     onClick={() => {
-                      clearSearchHistory(); // 事件监听会自动更新界面
+                      clearSearchHistory(); // شنونده رویداد به طور خودکار رابط کاربری را به‌روزرسانی می‌کند
                     }}
                     className='ml-3 text-sm text-gray-500 hover:text-red-500 transition-colors dark:text-gray-400 dark:hover:text-red-500'
                   >
-                    清空
+                    پاک کردن
                   </button>
                 )}
               </h2>
@@ -314,13 +314,13 @@ function SearchPageClient() {
                     >
                       {item}
                     </button>
-                    {/* 删除按钮 */}
+                    {/* دکمه حذف */}
                     <button
-                      aria-label='删除搜索历史'
+                      aria-label='حذف تاریخچه جستجو'
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        deleteSearchHistory(item); // 事件监听会自动更新界面
+                        deleteSearchHistory(item); // شنونده رویداد به طور خودکار رابط کاربری را به‌روزرسانی می‌کند
                       }}
                       className='absolute -top-1 -right-1 w-4 h-4 opacity-0 group-hover:opacity-100 bg-gray-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] transition-colors'
                     >
