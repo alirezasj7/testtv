@@ -28,39 +28,39 @@ function DoubanPageClient() {
 
   const type = searchParams.get('type') || 'movie';
 
-  // 选择器状态 - 完全独立，不依赖URL参数
+  // وضعیت انتخابگرها - کاملاً مستقل و بدون وابستگی به پارامترهای URL
   const [primarySelection, setPrimarySelection] = useState<string>(() => {
-    return type === 'movie' ? '热门' : '';
+    return type === 'movie' ? 'محبوب' : '';
   });
   const [secondarySelection, setSecondarySelection] = useState<string>(() => {
-    if (type === 'movie') return '全部';
+    if (type === 'movie') return 'همه';
     if (type === 'tv') return 'tv';
     if (type === 'show') return 'show';
-    return '全部';
+    return 'همه';
   });
 
-  // 初始化时标记选择器为准备好状态
+  // در زمان مقداردهی اولیه، انتخابگرها را به عنوان آماده علامت‌گذاری می‌کند
   useEffect(() => {
-    // 短暂延迟确保初始状态设置完成
+    // یک تأخیر کوتاه برای اطمینان از تکمیل تنظیمات اولیه
     const timer = setTimeout(() => {
       setSelectorsReady(true);
     }, 50);
 
     return () => clearTimeout(timer);
-  }, []); // 只在组件挂载时执行一次
+  }, []); // فقط یک بار هنگام بارگذاری کامپوننت اجرا می‌شود
 
-  // type变化时立即重置selectorsReady（最高优先级）
+  // هنگام تغییر type، بلافاصله selectorsReady را ریست می‌کند (بالاترین اولویت)
   useEffect(() => {
     setSelectorsReady(false);
-    setLoading(true); // 立即显示loading状态
+    setLoading(true); // فوراً وضعیت loading را نمایش می‌دهد
   }, [type]);
 
-  // 当type变化时重置选择器状态
+  // هنگام تغییر type، وضعیت انتخابگرها را ریست می‌کند
   useEffect(() => {
-    // 批量更新选择器状态
+    // به‌روزرسانی گروهی وضعیت انتخابگرها
     if (type === 'movie') {
-      setPrimarySelection('热门');
-      setSecondarySelection('全部');
+      setPrimarySelection('محبوب');
+      setSecondarySelection('همه');
     } else if (type === 'tv') {
       setPrimarySelection('');
       setSecondarySelection('tv');
@@ -69,10 +69,10 @@ function DoubanPageClient() {
       setSecondarySelection('show');
     } else {
       setPrimarySelection('');
-      setSecondarySelection('全部');
+      setSecondarySelection('همه');
     }
 
-    // 使用短暂延迟确保状态更新完成后标记选择器准备好
+    // استفاده از یک تأخیر کوتاه برای اطمینان از آماده بودن انتخابگرها پس از به‌روزرسانی وضعیت
     const timer = setTimeout(() => {
       setSelectorsReady(true);
     }, 50);
@@ -80,13 +80,13 @@ function DoubanPageClient() {
     return () => clearTimeout(timer);
   }, [type]);
 
-  // 生成骨架屏数据
+  // ایجاد داده‌های اسکلتی (Skeleton)
   const skeletonData = Array.from({ length: 25 }, (_, index) => index);
 
-  // 生成API请求参数的辅助函数
+  // تابع کمکی برای ایجاد پارامترهای درخواست API
   const getRequestParams = useCallback(
     (pageStart: number) => {
-      // 当type为tv或show时，kind统一为'tv'，category使用type本身
+      // زمانی که type برابر با 'tv' یا 'show' است، kind همیشه 'tv' و category خود type خواهد بود
       if (type === 'tv' || type === 'show') {
         return {
           kind: 'tv' as const,
@@ -97,7 +97,7 @@ function DoubanPageClient() {
         };
       }
 
-      // 电影类型保持原逻辑
+      // برای نوع فیلم، منطق قبلی حفظ می‌شود
       return {
         kind: type as 'tv' | 'movie',
         category: primarySelection,
@@ -109,7 +109,7 @@ function DoubanPageClient() {
     [type, primarySelection, secondarySelection]
   );
 
-  // 防抖的数据加载函数
+  // تابع بارگذاری داده با استفاده از debounce
   const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
@@ -120,37 +120,37 @@ function DoubanPageClient() {
         setHasMore(data.list.length === 25);
         setLoading(false);
       } else {
-        throw new Error(data.message || '获取数据失败');
+        throw new Error(data.message || 'دریافت داده‌ها ناموفق بود');
       }
     } catch (err) {
       console.error(err);
     }
   }, [type, primarySelection, secondarySelection, getRequestParams]);
 
-  // 只在选择器准备好后才加载数据
+  // داده‌ها فقط پس از آماده شدن انتخابگرها بارگذاری می‌شوند
   useEffect(() => {
-    // 只有在选择器准备好时才开始加载
+    // بارگذاری فقط زمانی شروع می‌شود که انتخابگرها آماده باشند
     if (!selectorsReady) {
       return;
     }
 
-    // 重置页面状态
+    // ریست کردن وضعیت صفحه
     setDoubanData([]);
     setCurrentPage(0);
     setHasMore(true);
     setIsLoadingMore(false);
 
-    // 清除之前的防抖定时器
+    // پاک کردن تایمر debounce قبلی
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // 使用防抖机制加载数据，避免连续状态更新触发多次请求
+    // استفاده از مکانیزم debounce برای جلوگیری از درخواست‌های مکرر
     debounceTimeoutRef.current = setTimeout(() => {
       loadInitialData();
-    }, 100); // 100ms 防抖延迟
+    }, 100); // تأخیر 100 میلی‌ثانیه
 
-    // 清理函数
+    // تابع پاکسازی
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
@@ -164,7 +164,7 @@ function DoubanPageClient() {
     loadInitialData,
   ]);
 
-  // 单独处理 currentPage 变化（加载更多）
+  // مدیریت جداگانه تغییر currentPage (برای بارگذاری بیشتر)
   useEffect(() => {
     if (currentPage > 0) {
       const fetchMoreData = async () => {
@@ -179,7 +179,7 @@ function DoubanPageClient() {
             setDoubanData((prev) => [...prev, ...data.list]);
             setHasMore(data.list.length === 25);
           } else {
-            throw new Error(data.message || '获取数据失败');
+            throw new Error(data.message || 'دریافت داده‌ها ناموفق بود');
           }
         } catch (err) {
           console.error(err);
@@ -192,14 +192,14 @@ function DoubanPageClient() {
     }
   }, [currentPage, type, primarySelection, secondarySelection]);
 
-  // 设置滚动监听
+  // تنظیم IntersectionObserver برای اسکرول بی‌نهایت
   useEffect(() => {
-    // 如果没有更多数据或正在加载，则不设置监听
+    // اگر داده بیشتری وجود ندارد یا در حال بارگذاری است، observer را تنظیم نکن
     if (!hasMore || isLoadingMore || loading) {
       return;
     }
 
-    // 确保 loadingRef 存在
+    // اطمینان از وجود loadingRef.current
     if (!loadingRef.current) {
       return;
     }
@@ -223,10 +223,10 @@ function DoubanPageClient() {
     };
   }, [hasMore, isLoadingMore, loading]);
 
-  // 处理选择器变化
+  // مدیریت تغییر انتخابگر اصلی
   const handlePrimaryChange = useCallback(
     (value: string) => {
-      // 只有当值真正改变时才设置loading状态
+      // وضعیت loading فقط زمانی تنظیم می‌شود که مقدار واقعاً تغییر کند
       if (value !== primarySelection) {
         setLoading(true);
         setPrimarySelection(value);
@@ -235,9 +235,10 @@ function DoubanPageClient() {
     [primarySelection]
   );
 
+    // مدیریت تغییر انتخابگر فرعی
   const handleSecondaryChange = useCallback(
     (value: string) => {
-      // 只有当值真正改变时才设置loading状态
+      // وضعیت loading فقط زمانی تنظیم می‌شود که مقدار واقعاً تغییر کند
       if (value !== secondarySelection) {
         setLoading(true);
         setSecondarySelection(value);
@@ -247,8 +248,8 @@ function DoubanPageClient() {
   );
 
   const getPageTitle = () => {
-    // 根据 type 生成标题
-    return type === 'movie' ? '电影' : type === 'tv' ? '电视剧' : '综艺';
+    // ایجاد عنوان بر اساس type
+    return type === 'movie' ? 'فیلم' : type === 'tv' ? 'سریال' : 'برنامه تلویزیونی';
   };
 
   const getActivePath = () => {
@@ -263,19 +264,19 @@ function DoubanPageClient() {
   return (
     <PageLayout activePath={getActivePath()}>
       <div className='px-4 sm:px-10 py-4 sm:py-8 overflow-visible'>
-        {/* 页面标题和选择器 */}
+        {/* عنوان صفحه و انتخابگرها */}
         <div className='mb-6 sm:mb-8 space-y-4 sm:space-y-6'>
-          {/* 页面标题 */}
+          {/* عنوان صفحه */}
           <div>
             <h1 className='text-2xl sm:text-3xl font-bold text-gray-800 mb-1 sm:mb-2 dark:text-gray-200'>
               {getPageTitle()}
             </h1>
             <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400'>
-              来自豆瓣的精选内容
+              محتوای منتخب از Douban
             </p>
           </div>
 
-          {/* 选择器组件 */}
+          {/* کامپوننت انتخابگر */}
           <div className='bg-white/60 dark:bg-gray-800/40 rounded-2xl p-4 sm:p-6 border border-gray-200/30 dark:border-gray-700/30 backdrop-blur-sm'>
             <DoubanSelector
               type={type as 'movie' | 'tv' | 'show'}
@@ -287,14 +288,14 @@ function DoubanPageClient() {
           </div>
         </div>
 
-        {/* 内容展示区域 */}
+        {/* ناحیه نمایش محتوا */}
         <div className='max-w-[95%] mx-auto mt-8 overflow-visible'>
-          {/* 内容网格 */}
+          {/* گرید محتوا */}
           <div className='grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
             {loading || !selectorsReady
-              ? // 显示骨架屏
+              ? // نمایش اسکلت (Skeleton)
                 skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
-              : // 显示实际数据
+              : // نمایش داده‌های واقعی
                 doubanData.map((item, index) => (
                   <div key={`${item.title}-${index}`} className='w-full'>
                     <VideoCard
@@ -304,13 +305,13 @@ function DoubanPageClient() {
                       douban_id={item.id}
                       rate={item.rate}
                       year={item.year}
-                      type={type === 'movie' ? 'movie' : ''} // 电影类型严格控制，tv 不控
+                      type={type === 'movie' ? 'movie' : ''} // نوع فیلم به شدت کنترل می‌شود، اما tv نه
                     />
                   </div>
                 ))}
           </div>
 
-          {/* 加载更多指示器 */}
+          {/* نشانگر بارگذاری بیشتر */}
           {hasMore && !loading && (
             <div
               ref={(el) => {
@@ -325,20 +326,20 @@ function DoubanPageClient() {
               {isLoadingMore && (
                 <div className='flex items-center gap-2'>
                   <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-green-500'></div>
-                  <span className='text-gray-600'>加载中...</span>
+                  <span className='text-gray-600'>در حال بارگذاری...</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* 没有更多数据提示 */}
+          {/* پیام "داده بیشتری وجود ندارد" */}
           {!hasMore && doubanData.length > 0 && (
-            <div className='text-center text-gray-500 py-8'>已加载全部内容</div>
+            <div className='text-center text-gray-500 py-8'>تمام محتوا بارگذاری شد</div>
           )}
 
-          {/* 空状态 */}
+          {/* وضعیت خالی */}
           {!loading && doubanData.length === 0 && (
-            <div className='text-center text-gray-500 py-8'>暂无相关内容</div>
+            <div className='text-center text-gray-500 py-8'>محتوای مرتبطی یافت نشد</div>
           )}
         </div>
       </div>
